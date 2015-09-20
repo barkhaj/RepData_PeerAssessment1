@@ -1,15 +1,11 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+# Reproducible Research: Peer Assessment 1
 
 
 ## Loading and preprocessing the data
 
 ###Load data
-```{r, setup}
+
+```r
 #Assume have set working directory
 #Download and unzip file
 zipFile<-"https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
@@ -27,7 +23,8 @@ activityData<-read.table(dataFile,sep=",",header=TRUE,stringsAsFactors = FALSE,n
 
 ###Process data
 
-```{r, process data}
+
+```r
 #Dates, convert date, and create date description and extract day of week
 activityData$date2 = as.Date(activityData$date)
 activityData$dateDesc = format(activityData$date2, "%d %b %Y") 
@@ -36,14 +33,14 @@ activityData$DOW = weekdays(activityData$date2)
 #Times, handle values 2350 as 23:50
 activityData$interval2  <- as.POSIXct(sprintf("%04d", activityData$interval), format="%H%M")
 activityData$interval3  <- format(strptime(sprintf("%04d", activityData$interval), format="%H%M"),format = "%H:%M")
-
 ```
 
 
 ## What is mean total number of steps taken per day?
 
 ###Filter  data
-```{r, filter data, message = FALSE}
+
+```r
 library(sqldf)
 
 #Subset data 
@@ -52,11 +49,11 @@ stepsData <- sqldf('select date2, dateDesc, DOW, sum(steps) as totSteps
                    where steps <> "NA" 
                    group by date2, dateDesc, DOW 
                    order by date2')
-
 ```
 
 ###Plot data
-```{r, plot average steps taken per day}
+
+```r
 library(ggplot2)
 
 meanSteps <-round(mean(stepsData$totSteps),digits = 0)
@@ -73,13 +70,15 @@ ggplot(stepsData,
   ggtitle(paste0("Average steps taken per day  mean - ",meanSteps," | median: ", medianSteps)) +
   ylab("Total steps") +
   xlab("Date") 
-
 ```
+
+![](PA1_template_files/figure-html/plot average steps taken per day-1.png) 
 
 ## What is the average daily activity pattern?
 
 ###Filter  data
-```{r}
+
+```r
 intervalData <- sqldf(
     ' select interval2, sum(steps) as totSteps, avg(steps) as avgSteps 
       from activityData 
@@ -87,12 +86,11 @@ intervalData <- sqldf(
       group by interval2 
       having totSteps > 0 
     ')
-
 ```
 
 ###Plot data 
-```{r, plot activity patterns, message = FALSE}
 
+```r
 #Filter data
 intervalData <- sqldf('select interval2, avg(steps) as avgSteps 
                       from activityData where steps <> "NA" 
@@ -112,23 +110,24 @@ ggplot(intervalData,
   ggtitle(paste0("Activity patterns highest")) +
   ylab("Average steps") +
   xlab("Time Intervals")
-
-
 ```
 
-The interval with the highest number of steps is: **`r maxInterval` pm**
+![](PA1_template_files/figure-html/plot activity patterns-1.png) 
+
+The interval with the highest number of steps is: **23:55 pm**
 
 
 ## Imputing missing values
-```{r, calculate na rows}
+
+```r
 #dataset with NAs
 naData<-sqldf('select * from activityData where steps="NA"')
 naRows<-nrow(naData)
-
 ```
-#####The total number of missing values in the dataset, the total number of rows with NAs is: **`r naRows`**
+#####The total number of missing values in the dataset, the total number of rows with NAs is: **2304**
 
-```{r, calculate missing values, message = FALSE}
+
+```r
 #Calculate average data for non NA values
 meanData<-sqldf('select avg(steps) as AvgSteps
                   , DOW, interval 
@@ -142,12 +141,11 @@ activityDS<-merge(activityData,meanData,by.x=c("interval","DOW"),by.y=c("interva
 
 #Populate NA values
 activityDS$imputeSteps<-ifelse(activityDS$steps=="NA",activityDS$AvgSteps,activityDS$steps)
-
 ```
 
 ### Plot data
-```{r, plot imputed values}
 
+```r
 #Summarise using dataset with imputed values
 stepsData2 <- sqldf('select date2, dateDesc, DOW, sum(imputeSteps) as totSteps
                    from activityDS 
@@ -168,21 +166,22 @@ ggplot(stepsData2,
   ggtitle(paste0("Average steps taken per day  mean - ",meanSteps2," | median: ", medianSteps2)) +
   ylab("Total steps") +
   xlab("Date") 
-
 ```
+
+![](PA1_template_files/figure-html/plot imputed values-1.png) 
 
 Compared to the earlier graph with NAs excluded, this histogram shows:
 
   + the mean and median values have changed
-    + Mean increased by **`r meanSteps2 -meanSteps`** steps
-    + Median increased by **`r medianSteps2 - medianSteps`** steps
-  + there is a larger gap of **`r abs(meanSteps2 - medianSteps2)`** steps between the mean and median values
+    + Mean increased by **55** steps
+    + Median increased by **250** steps
+  + there is a larger gap of **194** steps between the mean and median values
 
 
 ## Are there differences in activity patterns between weekdays and weekends?
 
-```{r, plot activity patterns weekdays vs weekends}
 
+```r
 #Classify as weekend
 activityDS$dayType<-ifelse(activityDS$DOW %in% c("Sunday","Saturday"),"Weekend","Weekday")
 
@@ -202,7 +201,8 @@ ggplot(dayData,
   ylab("Number of steps") +
   xlab("Interval")+ 
   facet_wrap( ~ dayType, nrow = 2)
-
 ```
+
+![](PA1_template_files/figure-html/plot activity patterns weekdays vs weekends-1.png) 
 
 The highest average steps taken at a single interval, are on a ***weekday***.
